@@ -244,8 +244,8 @@ model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets_
 
 
 model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
-model_checkpoint = ModelCheckpoint('weights.{epoch:02d}-{val_loss:.2f}.hdf5',
-                                   monitor='loss',
+model_checkpoint = ModelCheckpoint('weights_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
+                                   monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
                                    verbose=1,
                                    save_best_only=True,
                                    save_weights_only=True)
@@ -253,7 +253,7 @@ model_checkpoint = ModelCheckpoint('weights.{epoch:02d}-{val_loss:.2f}.hdf5',
 model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
                       [state_feed, action_feed, next_state_feed],
                         batch_size=50,
-                        epochs=10,
+                        epochs=2,
                         verbose=1,
                         validation_split=0.2,
                         shuffle=True,

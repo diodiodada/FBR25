@@ -236,15 +236,38 @@ for i in range(25):
 
 
 model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets)
+# plot_model(model_for_25_nets, to_file='model_for_25_nets_split.png',show_shapes = True, show_layer_names = True)
 
-plot_model(model_for_25_nets, to_file='model_for_25_nets_split.png',show_shapes = True, show_layer_names = True)
+
+# construct the input feed
+input_feed = []
+for i in range(25):
+    input_feed.append(state_feed)
+    input_feed.append(action_feed)
+    input_feed.append(next_state_feed)
 
 
-# model.fit(      [state_feed,action_feed,next_state_feed],
-#                 [state_feed,action_feed,next_state_feed],
-#                 batch_size=50,
-#                 epochs=1,
-#                 verbose=1,
-#                 validation_split=0.2,
-#                 shuffle=True,
-#                 callbacks=[model_checkpoint])
+# construct the output feed
+output_feed = []
+for i in range(25):
+    output_feed.append(state_feed)
+    output_feed.append(action_feed)
+    output_feed.append(next_state_feed)
+
+
+model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
+model_checkpoint = ModelCheckpoint('weights_split_input.{epoch:02d}-{val_loss:.2f}.hdf5',
+                                   monitor='val_loss',                      # here 'val_loss' and 'loss' are the same
+                                   verbose=1,
+                                   save_best_only=True,
+                                   save_weights_only=True)
+
+
+model_for_25_nets.fit(      input_feed,
+                            output_feed,
+                            batch_size=50,
+                            epochs=2,
+                            verbose=1,
+                            validation_split=0.2,
+                            shuffle=True,
+                            callbacks=[model_checkpoint])
