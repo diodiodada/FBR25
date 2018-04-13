@@ -236,7 +236,7 @@ for i in range(25):
 
 
 model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets)
-# plot_model(model_for_25_nets, to_file='model_for_25_nets_split.png',show_shapes = True, show_layer_names = True)
+plot_model(model_for_25_nets, to_file='model_for_25_nets_split.png',show_shapes = True, show_layer_names = True)
 
 
 # construct the input feed
