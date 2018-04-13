@@ -262,18 +262,18 @@ model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets_
 plot_model(model_for_25_nets, to_file='model_for_25_nets_average_not_share_weight.png',show_shapes = True, show_layer_names = True)
 
 
-# model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
-# model_checkpoint = ModelCheckpoint('weights_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
-#                                    monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
-#                                    verbose=1,
-#                                    save_best_only=True,
-#                                    save_weights_only=True)
-#
-# model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
-#                       [state_feed, action_feed, next_state_feed],
-#                         batch_size=50,
-#                         epochs=2,
-#                         verbose=1,
-#                         validation_split=0.2,
-#                         shuffle=True,
-#                         callbacks=[model_checkpoint])
+model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
+model_checkpoint = ModelCheckpoint('weights_not_share_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
+                                   monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
+                                   verbose=1,
+                                   save_best_only=True,
+                                   save_weights_only=True)
+
+model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
+                      [state_feed, action_feed, next_state_feed],
+                        batch_size=50,
+                        epochs=10,
+                        verbose=1,
+                        validation_split=0.2,
+                        shuffle=True,
+                        callbacks=[model_checkpoint])

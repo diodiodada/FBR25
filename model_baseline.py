@@ -107,7 +107,7 @@ model_checkpoint = ModelCheckpoint('weights_baseline.{epoch:02d}-{val_loss:.2f}.
 model.fit([state_feed,action_feed,next_state_feed],
               [state_feed,action_feed,next_state_feed],
               batch_size=50,
-              nb_epoch=10,
+              epochs=10,
               verbose=1,
               validation_split=0.2,
               shuffle=True,

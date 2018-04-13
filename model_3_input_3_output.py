@@ -278,7 +278,7 @@ def train(model_for_25_nets):
     model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
                           [state_feed, action_feed, next_state_feed],
                             batch_size=50,
-                            epochs=2,
+                            epochs=10,
                             verbose=1,
                             validation_split=0.2,
                             shuffle=True,
