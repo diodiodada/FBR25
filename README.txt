@@ -13,7 +13,7 @@
 
 还有，我发现了一些 keras 的不足：
 
-如果 layer(or model) A 和 layer(or model) B 共享权重，并且 A 和 B 的输入是一样的话，用 plot_model 画图不会显示重复的内容，
+如果 layer(or model) A 和 layer(or model) B 共享权重，并且 A 和 B 的输入是一样的话，用 plot_model 画图会失败，
 但是这里不清楚的是，在计算 loss 的时候 keras 会不会把重复的部分考虑进去。
 
 如果 layer(or model) A 和 layer(or model) B 共享权重，并且 A 和 B 的输入不一样，用 plot_model 画图仍然会失败，
