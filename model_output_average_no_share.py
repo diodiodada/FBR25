@@ -16,7 +16,6 @@ from keras.utils.vis_utils import plot_model
 import pickle
 
 
-
 # =================== define forward model ===================
 # state + action  -> next_state
 def create_forward_model():
@@ -70,7 +69,7 @@ def create_backward_model():
     return MODEL_B
 
 # =================== define recover model ===================
-# action + next_state -> state
+# next_state + action -> state
 def create_recover_model():
 
     r_action = Input(shape=(6,))
@@ -99,9 +98,13 @@ def create_recover_model():
 # =================== add computation node to the graph ===================
 def add_computation_node(type, current_components, need):
 
-    global MODEL_F
-    global MODEL_B
-    global MODEL_R
+    # global MODEL_F
+    # global MODEL_B
+    # global MODEL_R
+
+    MODEL_F = create_forward_model()
+    MODEL_B = create_backward_model()
+    MODEL_R = create_recover_model()
 
     if 'forward' in need:
         # forward-network's type : 0,1,2,3
@@ -195,11 +198,15 @@ def generate_one_model(F, B, R):
 
     return model_return
 
-# =================== global variable for weight sharing ===================
 
-MODEL_F = create_forward_model()
-MODEL_B = create_backward_model()
-MODEL_R = create_recover_model()
+# (state,action,next_state,reward,done)
+#    17     6          17      1    1
+data = pickle.load(open('/home/zj/Desktop/4zj_HalfCheetah-v2_expert_traj.p', 'rb'))
+
+state_feed = data[:, 0:17]
+action_feed = data[:, 17:23]
+next_state_feed = data[:, 23:40]
+
 
 all_type = [
     '000', '001', '002', '003', '010', '012',
@@ -210,83 +217,63 @@ all_type = [
     '300', '301', '310',
 ]
 
+
+# MODEL_F = create_forward_model()
+# MODEL_B = create_backward_model()
+# MODEL_R = create_recover_model()
+
 # ==== construct the whole big network consisting of 25 networks ====
-def construct_the_whole_network():
 
-    models = []
+models = []
+outputs_for_25_nets = []
+input_for_25_nets = [Input(shape=(17,)),
+                     Input(shape=(6,)),
+                     Input(shape=(17,))]
 
-    input_for_25_nets = [Input(shape=(17,)),
-                         Input(shape=(6,)),
-                         Input(shape=(17,))]
-    outputs_for_25_nets = []
+for i in range(25):
+    f = int(all_type[i][0])
+    b = int(all_type[i][1])
+    r = int(all_type[i][2])
 
-    for i in range(len(all_type)):
-        f = int(all_type[i][0])
-        b = int(all_type[i][1])
-        r = int(all_type[i][2])
+    models.append( generate_one_model(f, b, r) )
 
-        models.append( generate_one_model(f, b, r) )
+    outputs_for_25_nets.append( models[i](input_for_25_nets) )
 
-        outputs_for_25_nets.append( models[i](input_for_25_nets) )
+    # print( models[i].name, all_type[i] )
 
-        # print( models[i].name, all_type[i] )
+state_outputs_for_25_nets=[]
+action_outputs_for_25_nets=[]
+next_state_outputs_for_25_nets=[]
 
-
-    # calculate the average of the output
-    state_outputs_for_25_nets=[]
-    action_outputs_for_25_nets=[]
-    next_state_outputs_for_25_nets=[]
-
-    # separate the action state next_state
-    for i in range(len(all_type)):
-        state_outputs_for_25_nets.append(outputs_for_25_nets[i][0])
-        action_outputs_for_25_nets.append(outputs_for_25_nets[i][1])
-        next_state_outputs_for_25_nets.append(outputs_for_25_nets[i][2])
-
-    # calculate the average
-    outputs_for_25_nets_average = [Average()(state_outputs_for_25_nets),
-                                   Average()(action_outputs_for_25_nets),
-                                   Average()(next_state_outputs_for_25_nets)]
-
-    # define the model
-    model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets_average)
-
-    # draw the picture of the network
-    plot_model(model_for_25_nets, to_file='model_for_25_nets_average.png',show_shapes = True, show_layer_names = True)
-
-    return model_for_25_nets
-
-# === training ===
-def train(model_for_25_nets):
-
-    # (state,action,next_state,reward,done)
-    #    17     6          17      1    1
-    data = pickle.load(open('/home/zj/Desktop/4zj_HalfCheetah-v2_expert_traj.p', 'rb'))
-
-    state_feed = data[:, 0:17]
-    action_feed = data[:, 17:23]
-    next_state_feed = data[:, 23:40]
+for i in range(25):
+    state_outputs_for_25_nets.append(outputs_for_25_nets[i][0])
+    action_outputs_for_25_nets.append(outputs_for_25_nets[i][1])
+    next_state_outputs_for_25_nets.append(outputs_for_25_nets[i][2])
 
 
-    model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
-    model_checkpoint = ModelCheckpoint('weights_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
-                                       monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
-                                       verbose=1,
-                                       save_best_only=True,
-                                       save_weights_only=True)
+outputs_for_25_nets_average = [Average()(state_outputs_for_25_nets),
+                               Average()(action_outputs_for_25_nets),
+                               Average()(next_state_outputs_for_25_nets)]
 
-    model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
-                          [state_feed, action_feed, next_state_feed],
-                            batch_size=50,
-                            epochs=2,
-                            verbose=1,
-                            validation_split=0.2,
-                            shuffle=True,
-                            callbacks=[model_checkpoint])
+# define the model
+model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets_average)
+
+# draw the picture of the network
+plot_model(model_for_25_nets, to_file='model_for_25_nets_average_not_share_weight.png',show_shapes = True, show_layer_names = True)
 
 
-if __name__ == '__main__':
-
-    model_for_25_nets = construct_the_whole_network()
-    train(model_for_25_nets)
-
+# model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
+# model_checkpoint = ModelCheckpoint('weights_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
+#                                    monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
+#                                    verbose=1,
+#                                    save_best_only=True,
+#                                    save_weights_only=True)
+#
+# model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
+#                       [state_feed, action_feed, next_state_feed],
+#                         batch_size=50,
+#                         epochs=2,
+#                         verbose=1,
+#                         validation_split=0.2,
+#                         shuffle=True,
+#                         callbacks=[model_checkpoint])
