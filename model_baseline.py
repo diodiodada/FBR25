@@ -10,7 +10,7 @@
 
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 from keras.optimizers import *
 import pickle
 
@@ -95,20 +95,34 @@ state_output = Dense(17)(R_input_4)
 #============================================================================
 
 model = Model(inputs=[state,action,next_state], outputs=[state_output,action_output,next_state_output])
-model.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
+model.compile(optimizer = Adam(lr = 1e-4),
+              loss = 'mean_squared_error',
+              metrics=['mse'])
 
-model_checkpoint = ModelCheckpoint('weights_baseline.{epoch:02d}-{val_loss:.2f}.hdf5',
-                                   monitor='loss',
-                                   verbose=1,
-                                   save_best_only=True,
-                                   save_weights_only=True)
+tf_board = TensorBoard(log_dir='./logs',
+                    histogram_freq=0,
+                    write_graph=True,
+                    write_images=False,
+                    embeddings_freq=0,
+                    embeddings_layer_names=None,
+                    embeddings_metadata=None)
 
+early_stop = EarlyStopping(monitor='val_loss',
+                               patience=0,
+                               verbose=0,
+                               mode='auto')
+
+model_checkpoint = ModelCheckpoint('model_base_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
+                                       monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
+                                       verbose=1,
+                                       save_best_only=True,
+                                       save_weights_only=True)
 
 model.fit([state_feed,action_feed,next_state_feed],
-              [state_feed,action_feed,next_state_feed],
-              batch_size=50,
-              epochs=1,
-              verbose=1,
-              validation_split=0.2,
-              shuffle=True,
-              callbacks=[model_checkpoint])
+                          [state_feed, action_feed, next_state_feed],
+                            batch_size=50,
+                            epochs=1000,
+                            verbose=1,
+                            validation_split=0.2,
+                            shuffle=True,
+                            callbacks=[tf_board, early_stop, model_checkpoint])

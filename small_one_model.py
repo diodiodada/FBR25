@@ -10,7 +10,7 @@
 
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate,Average
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 from keras.optimizers import *
 from keras.utils.vis_utils import plot_model
 import pickle
@@ -201,44 +201,37 @@ MODEL_F = create_forward_model()
 MODEL_B = create_backward_model()
 MODEL_R = create_recover_model()
 
-# all_type = [
-#     '000', '001', '002', '003', '010', '012',
-#     '020', '021', '022', '023', '030', '032',
-#     '100', '101', '110',
-#     '120', '130',
-#     '200', '201', '202', '203', '210',
-#     '300', '301', '310',
-# ]
-
 all_type = [
-    '310'
+    '000', '001', '002', '003', '010', '012',
+    '020', '021', '022', '023', '030', '032',
+    '100', '101', '110',
+    '120', '130',
+    '200', '201', '202', '203', '210',
+    '300', '301', '310',
 ]
 
-# ==== construct the whole big network consisting of 25 networks ====
-def construct_the_whole_network():
 
-    models = []
+# ==== construct the whole big network consisting of 25 networks ====
+def construct_the_whole_network(i):
 
     input_for_25_nets = [Input(shape=(17,)),
                          Input(shape=(6,)),
                          Input(shape=(17,))]
 
-    outputs_for_25_nets = 0
 
-    for i in range(len(all_type)):
-        f = int(all_type[i][0])
-        b = int(all_type[i][1])
-        r = int(all_type[i][2])
+    f = int(all_type[i][0])
+    b = int(all_type[i][1])
+    r = int(all_type[i][2])
 
-        models.append( generate_one_model(f, b, r) )
+    model = generate_one_model(f, b, r)
 
-        outputs_for_25_nets = models[i](input_for_25_nets)
+    outputs_for_25_nets = model(input_for_25_nets)
 
-        # print( models[i].name, all_type[i] )
+    # print( models[i].name, all_type[i] )
 
-        # draw the picture of the network
-        plot_model(models[i], to_file='model_for_' + all_type[0] + '.png', show_shapes=True,
-                   show_layer_names=True)
+    # draw the picture of the network
+    plot_model(model, to_file='model_for_' + all_type[i] + '.png', show_shapes=True,
+               show_layer_names=True)
 
     # print(outputs_for_25_nets)
 
@@ -248,7 +241,7 @@ def construct_the_whole_network():
     return model_for_25_nets
 
 # === training ===
-def train(model_for_25_nets):
+def train(model_for_25_nets, i):
 
     # (state,action,next_state,reward,done)
     #    17     6          17      1    1
@@ -259,8 +252,24 @@ def train(model_for_25_nets):
     next_state_feed = data[:, 23:40]
 
 
-    model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
-    model_checkpoint = ModelCheckpoint('model_'+all_type[0]+'_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
+    model_for_25_nets.compile(optimizer = Adam(lr = 1e-4),
+                              loss = 'mean_squared_error',
+                              metrics = ['mse'])
+
+    tf_board = TensorBoard(log_dir='./logs',
+                histogram_freq=0,
+                write_graph=True,
+                write_images=False,
+                embeddings_freq=0,
+                embeddings_layer_names=None,
+                embeddings_metadata=None)
+
+    early_stop = EarlyStopping(monitor='val_loss',
+                               patience=0,
+                               verbose=0,
+                               mode='auto')
+
+    model_checkpoint = ModelCheckpoint('model_'+all_type[i]+'_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
                                        monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
                                        verbose=1,
                                        save_best_only=True,
@@ -269,15 +278,18 @@ def train(model_for_25_nets):
     model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
                           [state_feed, action_feed, next_state_feed],
                             batch_size=50,
-                            epochs=10,
+                            epochs=1000,
                             verbose=1,
                             validation_split=0.2,
                             shuffle=True,
-                            callbacks=[model_checkpoint])
+                            callbacks=[tf_board, early_stop, model_checkpoint])
 
 
 if __name__ == '__main__':
 
-    model_for_25_nets = construct_the_whole_network()
-    train(model_for_25_nets)
+    # for i in range(25):
+    #     model_for_25_nets = construct_the_whole_network(i)
+    #     train(model_for_25_nets, i)
 
+    model_for_25_nets = construct_the_whole_network(1)
+    train(model_for_25_nets, 1)

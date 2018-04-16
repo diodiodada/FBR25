@@ -250,7 +250,7 @@ model_checkpoint = ModelCheckpoint('weights_same_input.{epoch:02d}-{val_loss:.2f
 model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
                         output_feed,
                         batch_size=50,
-                        epochs=2,
+                        epochs=1,
                         verbose=1,
                         validation_split=0.2,
                         shuffle=True,

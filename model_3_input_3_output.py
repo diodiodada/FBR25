@@ -10,7 +10,7 @@
 
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate,Average
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 from keras.optimizers import *
 from keras.utils.vis_utils import plot_model
 import pickle
@@ -252,7 +252,7 @@ def construct_the_whole_network():
     model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets_average)
 
     # draw the picture of the network
-    # plot_model(model_for_25_nets, to_file='model_for_25_nets_average.png',show_shapes = True, show_layer_names = True)
+    plot_model(model_for_25_nets, to_file='model_for_25_nets_average.png',show_shapes = True, show_layer_names = True)
 
     return model_for_25_nets
 
@@ -268,7 +268,24 @@ def train(model_for_25_nets):
     next_state_feed = data[:, 23:40]
 
 
-    model_for_25_nets.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_squared_error')
+
+    model_for_25_nets.compile(optimizer = Adam(lr = 1e-4),
+                              loss = 'mean_squared_error',
+                              metrics=['mse'])
+
+    tf_board = TensorBoard(log_dir='./logs',
+                           histogram_freq=0,
+                           write_graph=True,
+                           write_images=False,
+                           embeddings_freq=0,
+                           embeddings_layer_names=None,
+                           embeddings_metadata=None)
+
+    early_stop = EarlyStopping(monitor='val_loss',
+                               patience=0,
+                               verbose=0,
+                               mode='auto')
+
     model_checkpoint = ModelCheckpoint('weights_average_output.{epoch:02d}-{val_loss:.2f}.hdf5',
                                        monitor='val_loss',                        # here 'val_loss' and 'loss' are the same
                                        verbose=1,
@@ -282,8 +299,7 @@ def train(model_for_25_nets):
                             verbose=1,
                             validation_split=0.2,
                             shuffle=True,
-                            callbacks=[model_checkpoint])
-
+                            callbacks=[tf_board, early_stop , model_checkpoint])
 
 if __name__ == '__main__':
 
