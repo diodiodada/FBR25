@@ -1,6 +1,3 @@
-# state_space Box(17)
-# action_space Box(6)
-
 # import gym
 # env = gym.make('HalfCheetah-v2')
 # env.reset()

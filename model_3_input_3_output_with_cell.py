@@ -1,12 +1,3 @@
-# state_space Box(17)
-# action_space Box(6)
-
-# import gym
-# env = gym.make('HalfCheetah-v2')
-# env.reset()
-# for _ in range(1000):
-#     env.render()
-#     env.step(env.action_space.sample())
 
 from keras.models import Model
 from keras.layers import Input, Dense, Concatenate,Average
@@ -77,6 +68,7 @@ def create_backward_model():
     B_concat_1 = Dense(50, activation='relu', name='B_concat_1')(B_concat)
     B_concat_2 = Dense(50, activation='relu', name='B_concat_2')(B_concat_1)
     B_concat_3 = Dense(50, activation='relu', name='B_concat_3')(B_concat_2)
+    # B_action_output = Dense(6, activation= 'tanh', name='B_action_output')(B_concat_3)
     B_action_output = Dense(6, name='B_action_output')(B_concat_3)
 
     MODEL_B = Model(inputs=[b_state, b_next_state], outputs=B_action_output, name = 'backward_model')
@@ -201,6 +193,7 @@ def add_one_cell(F, B, R, input_for_25_nets):
     components.update(node_return)
     need.remove(network_type)
 
+    assert len(need)== 0
 
     return [components['s_t^'], components['a_t^'], components['s_t+1^']]
 
@@ -237,8 +230,6 @@ def construct_the_whole_network():
 
         outputs_for_25_nets.append( add_one_cell(f, b, r, input_for_25_nets) )
 
-        # print( models[i].name, all_type[i] )
-
 
     # calculate the average of the output
     state_outputs_for_25_nets=[]
@@ -256,12 +247,9 @@ def construct_the_whole_network():
                                    Average()(action_outputs_for_25_nets),
                                    Average()(next_state_outputs_for_25_nets)]
 
+
     # define the model
     model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets_average)
-
-    # print(model_for_25_nets.layers)
-    # yaml_string = model_for_25_nets.to_yaml()
-    # print(yaml_string)
 
     # draw the picture of the network
     # plot_model(model_for_25_nets, to_file='model_for_25_nets_average.png',show_shapes = True, show_layer_names = True)
@@ -314,8 +302,50 @@ def train(model_for_25_nets):
                             callbacks=[tf_board, early_stop , model_checkpoint])
 
 
+def test(model_for_25_nets):
+    data = pickle.load(open('/home/zj/Desktop/4zj_HalfCheetah-v2_expert_traj.p', 'rb'))
+
+    state_feed = data[:, 0:17]
+    action_feed = data[:, 17:23]
+    next_state_feed = data[:, 23:40]
+
+    model_for_25_nets.compile(optimizer=Adam(lr=1e-4),
+                              loss='mean_squared_error',
+                              metrics=['mse'])
+
+    model_for_25_nets.load_weights('weights_average_output.31-0.80.hdf5', by_name=True)
+
+    # results = model_for_25_nets.evaluate([state_feed, action_feed, next_state_feed],
+    #                                      [state_feed, action_feed, next_state_feed],
+    #                                        batch_size=32,
+    #                                        verbose=1,
+    #                                        sample_weight=None)
+
+    result = model_for_25_nets.predict([state_feed[0:2],
+                                        action_feed[0:2],
+                                        next_state_feed[0:2]],
+                                       batch_size=2,
+                                       verbose=1)
+    print("state")
+    print(len(result[0][0]))
+    print("action")
+    print(len(result[1][0]))
+    print("next_state")
+    print(len(result[2][0]))
+    print("\n\n")
+
+    print(result[0][0])
+    print(state_feed[0])
+
+    print(result[0][0] - state_feed[0])
+
+    # print([state_feed[0:2],
+    #        action_feed[0:2],
+    #        next_state_feed[0:2]])
+
 if __name__ == '__main__':
 
     model_for_25_nets = construct_the_whole_network()
     train(model_for_25_nets)
+    # test(model_for_25_nets)
 
