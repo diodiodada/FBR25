@@ -6,46 +6,27 @@ from keras.optimizers import *
 from keras.utils.vis_utils import plot_model
 import pickle
 
-def state_feature():
-    state = Input(shape=(17,))
-
-    s_1 = Dense(50, activation='relu', name = 's_1')(state)
-    s_2 = Dense(50, activation='relu', name = 's_2')(s_1)
-    s_3 = Dense(50, activation='relu', name = 's_3')(s_2)
-
-    state_feature = Model(inputs=state, outputs=s_3, name='state_feature')
-
-    return state_feature
-
-def action_feature():
-    action = Input(shape=(6,))
-
-    a_1 = Dense(50, activation='relu', name = 'a_1')(action)
-    a_2 = Dense(50, activation='relu', name = 'a_2')(a_1)
-    a_3 = Dense(50, activation='relu', name = 'a_3')(a_2)
-
-    action_feature = Model(inputs=action, outputs=a_3, name='action_feature')
-
-    return action_feature
-
 # =================== define forward model ===================
 # state + action  -> next_state
 def create_forward_model():
-    global state_feature
-    global action_feature
 
     f_state = Input(shape=(17,))
     f_action = Input(shape=(6,))
 
-    F_dense_s_3 = state_feature(f_state)
-    F_dense_a_3 = action_feature(f_action)
+    F_dense_s_1 = Dense(50, activation='relu', name='F_dense_s_1')(f_state)
+    F_dense_s_2 = Dense(50, activation='relu', name='F_dense_s_2')(F_dense_s_1)
+    F_dense_s_3 = Dense(50, activation='relu', name='F_dense_s_3')(F_dense_s_2)
 
-    F_concat = Concatenate(axis=-1, name='F_concat')([F_dense_s_3, F_dense_a_3])
+    F_dense_a_1 = Dense(50, activation='relu', name='F_dense_a_1')(f_action)
+    F_dense_a_2 = Dense(50, activation='relu', name='F_dense_a_2')(F_dense_a_1)
+    F_dense_a_3 = Dense(50, activation='relu', name='F_dense_a_3')(F_dense_a_2)
 
-    F_concat_1 = Dense(50, activation='relu', name='F_concat_1')(F_concat)
-    F_concat_2 = Dense(50, activation='relu', name='F_concat_2')(F_concat_1)
-    F_concat_3 = Dense(50, activation='relu', name='F_concat_3')(F_concat_2)
-    F_next_state_output = Dense(17, name='F_next_state_output')(F_concat_3)
+    F_input_1 = Concatenate(axis=-1, name='F_input_1')([F_dense_s_3, F_dense_a_3])
+
+    F_input_2 = Dense(50, activation='relu', name='F_input_2')(F_input_1)
+    F_input_3 = Dense(50, activation='relu', name='F_input_3')(F_input_2)
+    F_input_4 = Dense(50, activation='relu', name='F_input_4')(F_input_3)
+    F_next_state_output = Dense(17, name='F_next_state_output')(F_input_4)
 
     MODEL_F = Model(inputs=[f_state, f_action], outputs=F_next_state_output, name = 'forward_model')
 
@@ -54,22 +35,24 @@ def create_forward_model():
 # =================== define backward model ===================
 # state + next_state -> action
 def create_backward_model():
-    global state_feature
-    global action_feature
 
     b_state = Input(shape=(17,))
     b_next_state = Input(shape=(17,))
 
-    B_dense_s_3 = state_feature(b_state)
-    B_dense_a_3 = state_feature(b_next_state)
+    B_dense_s_1 = Dense(50, activation='relu', name='B_dense_s_1')(b_state)
+    B_dense_s_2 = Dense(50, activation='relu', name='B_dense_s_2')(B_dense_s_1)
+    B_dense_s_3 = Dense(50, activation='relu', name='B_dense_s_3')(B_dense_s_2)
 
-    B_concat = Concatenate(axis=-1, name='B_concat')([B_dense_s_3, B_dense_a_3])
+    B_dense_a_1 = Dense(50, activation='relu', name='B_dense_a_1')(b_next_state)
+    B_dense_a_2 = Dense(50, activation='relu', name='B_dense_a_2')(B_dense_a_1)
+    B_dense_a_3 = Dense(50, activation='relu', name='B_dense_a_3')(B_dense_a_2)
 
-    B_concat_1 = Dense(50, activation='relu', name='B_concat_1')(B_concat)
-    B_concat_2 = Dense(50, activation='relu', name='B_concat_2')(B_concat_1)
-    B_concat_3 = Dense(50, activation='relu', name='B_concat_3')(B_concat_2)
-    # B_action_output = Dense(6, activation= 'tanh', name='B_action_output')(B_concat_3)
-    B_action_output = Dense(6, name='B_action_output')(B_concat_3)
+    B_input_1 = Concatenate(axis=-1, name='B_input_1')([B_dense_s_3, B_dense_a_3])
+
+    B_input_2 = Dense(50, activation='relu', name='B_input_2')(B_input_1)
+    B_input_3 = Dense(50, activation='relu', name='B_input_3')(B_input_2)
+    B_input_4 = Dense(50, activation='relu', name='B_input_4')(B_input_3)
+    B_action_output = Dense(6, name='B_action_output')(B_input_4)
 
     MODEL_B = Model(inputs=[b_state, b_next_state], outputs=B_action_output, name = 'backward_model')
 
@@ -78,21 +61,24 @@ def create_backward_model():
 # =================== define recover model ===================
 # action + next_state -> state
 def create_recover_model():
-    global state_feature
-    global action_feature
 
     r_action = Input(shape=(6,))
     r_state = Input(shape=(17,))
 
-    R_dense_a_3 = action_feature(r_action)
-    R_dense_s_3 = state_feature(r_state)
+    R_dense_a_1 = Dense(50, activation='relu', name='R_dense_a_1')(r_action)
+    R_dense_a_2 = Dense(50, activation='relu', name='R_dense_a_2')(R_dense_a_1)
+    R_dense_a_3 = Dense(50, activation='relu', name='R_dense_a_3')(R_dense_a_2)
 
-    R_concat = Concatenate(axis=-1, name='R_concat')([R_dense_s_3, R_dense_a_3])
+    R_dense_s_1 = Dense(50, activation='relu', name='R_dense_s_1')(r_state)
+    R_dense_s_2 = Dense(50, activation='relu', name='R_dense_s_2')(R_dense_s_1)
+    R_dense_s_3 = Dense(50, activation='relu', name='R_dense_s_3')(R_dense_s_2)
 
-    R_concat_1 = Dense(50, activation='relu', name='R_input_2')(R_concat)
-    R_concat_2 = Dense(50, activation='relu', name='R_input_3')(R_concat_1)
-    R_concat_3 = Dense(50, activation='relu', name='R_input_4')(R_concat_2)
-    R_original_state_output = Dense(17, name='R_original_state_output')(R_concat_3)
+    R_input_1 = Concatenate(axis=-1, name='R_input_1')([R_dense_s_3, R_dense_a_3])
+
+    R_input_2 = Dense(50, activation='relu', name='R_input_2')(R_input_1)
+    R_input_3 = Dense(50, activation='relu', name='R_input_3')(R_input_2)
+    R_input_4 = Dense(50, activation='relu', name='R_input_4')(R_input_3)
+    R_original_state_output = Dense(17, name='R_original_state_output')(R_input_4)
 
     MODEL_R = Model(inputs=[r_action, r_state], outputs=R_original_state_output, name = 'recover_model')
 
@@ -199,8 +185,6 @@ def add_one_cell(F, B, R, input_for_25_nets):
 
 # =================== global variable for weight sharing ===================
 
-state_feature = state_feature()
-action_feature = action_feature()
 
 MODEL_F = create_forward_model()
 MODEL_B = create_backward_model()
@@ -242,12 +226,15 @@ def construct_the_whole_network():
         action_outputs_for_25_nets.append(outputs_for_25_nets[i][1])
         next_state_outputs_for_25_nets.append(outputs_for_25_nets[i][2])
 
-    print(state_outputs_for_25_nets)
+    set_state_outputs_for_25_nets = list(set(state_outputs_for_25_nets))
+    set_action_outputs_for_25_nets = list(set(action_outputs_for_25_nets))
+    set_next_state_outputs_for_25_nets = list(set(next_state_outputs_for_25_nets))
+
 
     # calculate the average
-    outputs_for_25_nets_average = [Average()(state_outputs_for_25_nets),
-                                   Average()(action_outputs_for_25_nets),
-                                   Average()(next_state_outputs_for_25_nets)]
+    outputs_for_25_nets_average = [Average()(set_state_outputs_for_25_nets),
+                                   Average()(set_action_outputs_for_25_nets),
+                                   Average()(set_next_state_outputs_for_25_nets)]
 
 
     # define the model
