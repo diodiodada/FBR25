@@ -101,57 +101,57 @@ def add_computation_node(type, current_components, need):
         if type[0] == 0:
             if ('s_t' in current_components) and ('a_t' in current_components):
                 next_state_estimate = MODEL_F([current_components['s_t'], current_components['a_t']])
-                return {'s_t+1^': next_state_estimate}, 'forward'
+                return {'s_t+1^': next_state_estimate}, 'forward', 'pure_forward'
         elif type[0] == 1:
             if ('s_t^' in current_components) and ('a_t' in current_components):
                 next_state_estimate = MODEL_F([current_components['s_t^'], current_components['a_t']])
-                return {'s_t+1^': next_state_estimate}, 'forward'
+                return {'s_t+1^': next_state_estimate}, 'forward', 'none'
         elif type[0] == 2:
             if ('s_t' in current_components) and ('a_t^' in current_components):
                 next_state_estimate = MODEL_F([current_components['s_t'], current_components['a_t^']])
-                return {'s_t+1^': next_state_estimate}, 'forward'
+                return {'s_t+1^': next_state_estimate}, 'forward', 'none'
         elif type[0] == 3:
             if ('s_t^' in current_components) and ('a_t^' in current_components):
                 next_state_estimate = MODEL_F([current_components['s_t^'], current_components['a_t^']])
-                return {'s_t+1^': next_state_estimate}, 'forward'
+                return {'s_t+1^': next_state_estimate}, 'forward', 'none'
 
     if 'backward' in need:
         # backward-network's type : 0,1,2,3
         if type[1] == 0:
             if ('s_t' in current_components) and ('s_t+1' in current_components):
                 action_estimate = MODEL_B([current_components['s_t'], current_components['s_t+1']])
-                return {'a_t^': action_estimate}, 'backward'
+                return {'a_t^': action_estimate}, 'backward', 'pure_backward'
         elif type[1] == 1:
             if ('s_t^' in current_components) and ('s_t+1' in current_components):
                 action_estimate = MODEL_B([current_components['s_t^'], current_components['s_t+1']])
-                return {'a_t^': action_estimate}, 'backward'
+                return {'a_t^': action_estimate}, 'backward', 'none'
         elif type[1] == 2:
             if ('s_t' in current_components) and ('s_t+1^' in current_components):
                 action_estimate = MODEL_B([current_components['s_t'], current_components['s_t+1^']])
-                return {'a_t^': action_estimate}, 'backward'
+                return {'a_t^': action_estimate}, 'backward', 'none'
         elif type[1] == 3:
             if ('s_t^' in current_components) and ('s_t+1^' in current_components):
                 action_estimate = MODEL_B([current_components['s_t^'], current_components['s_t+1^']])
-                return {'a_t^': action_estimate}, 'backward'
+                return {'a_t^': action_estimate}, 'backward', 'none'
 
     if 'recover' in need:
         # recover-network's type : 0,1,2,3
         if type[2] == 0:
             if ('a_t' in current_components) and ('s_t+1' in current_components):
                 state_estimate = MODEL_R([current_components['a_t'], current_components['s_t+1']])
-                return {'s_t^': state_estimate}, 'recover'
+                return {'s_t^': state_estimate}, 'recover', 'pure_recover'
         elif type[2] == 1:
             if ('a_t^' in current_components) and ('s_t+1' in current_components):
                 state_estimate = MODEL_R([current_components['a_t^'], current_components['s_t+1']])
-                return {'s_t^': state_estimate}, 'recover'
+                return {'s_t^': state_estimate}, 'recover', 'none'
         elif type[2] == 2:
             if ('a_t' in current_components) and ('s_t+1^' in current_components):
                 state_estimate = MODEL_R([current_components['a_t'], current_components['s_t+1^']])
-                return {'s_t^': state_estimate}, 'recover'
+                return {'s_t^': state_estimate}, 'recover', 'none'
         elif type[2] == 3:
             if ('a_t^' in current_components) and ('s_t+1^' in current_components):
                 state_estimate = MODEL_R([current_components['a_t^'], current_components['s_t+1^']])
-                return {'s_t^': state_estimate}, 'recover'
+                return {'s_t^': state_estimate}, 'recover', 'none'
 
 # =================== add cell node to the graph ===================
 def add_one_cell(F, B, R, input_for_25_nets):
@@ -160,6 +160,7 @@ def add_one_cell(F, B, R, input_for_25_nets):
     next_state = input_for_25_nets[2]
 
     components = {'s_t': state, 'a_t': action, 's_t+1': next_state}
+    global pure_output
 
     need = ['forward', 'backward', 'recover']
 
@@ -167,17 +168,26 @@ def add_one_cell(F, B, R, input_for_25_nets):
     # I try to add computation node in "add_computation_node" funtion
     # I am not building a model in "add_computation_node" funtion !!
     # "add_computation_node" funtion should prevent add same repeated node !
-    node_return, network_type = add_computation_node([F, B, R], components, need)
+    node_return, network_type, pure_or_not = add_computation_node([F, B, R], components, need)
     components.update(node_return)
     need.remove(network_type)
 
-    node_return, network_type = add_computation_node([F, B, R], components, need)
+    if pure_or_not != 'none':
+        pure_output.update(node_return)
+
+    node_return, network_type, pure_or_not = add_computation_node([F, B, R], components, need)
     components.update(node_return)
     need.remove(network_type)
 
-    node_return, network_type = add_computation_node([F, B, R], components, need)
+    if pure_or_not != 'none':
+        pure_output.update(node_return)
+
+    node_return, network_type, pure_or_not = add_computation_node([F, B, R], components, need)
     components.update(node_return)
     need.remove(network_type)
+
+    if pure_or_not != 'none':
+        pure_output.update(node_return)
 
     assert len(need)== 0
 
@@ -185,7 +195,7 @@ def add_one_cell(F, B, R, input_for_25_nets):
 
 # =================== global variable for weight sharing ===================
 
-
+pure_output = {}
 MODEL_F = create_forward_model()
 MODEL_B = create_backward_model()
 MODEL_R = create_recover_model()
@@ -214,6 +224,8 @@ def construct_the_whole_network():
 
         outputs_for_25_nets.append( add_one_cell(f, b, r, input_for_25_nets) )
 
+
+    # print(pure_output)
 
     # calculate the average of the output
     state_outputs_for_25_nets=[]
@@ -249,18 +261,21 @@ def construct_the_whole_network():
     else:
         ave_next_state = Average()(set_next_state_outputs_for_25_nets)
 
-    # calculate the average
-    outputs_for_25_nets_average = [ave_state,
-                                   ave_action,
-                                   ave_next_state]
-
+    output_average_and_pure = [ave_state,
+                               ave_action,
+                               ave_next_state,
+                               pure_output['s_t^'],
+                               pure_output['a_t^'],
+                               pure_output['s_t+1^']]
 
     # define the model
-    model_for_25_nets = Model(inputs=input_for_25_nets, outputs=outputs_for_25_nets_average)
+    model_for_25_nets = Model(inputs=input_for_25_nets, outputs=output_average_and_pure)
 
     # draw the picture of the network
     # plot_model(model_for_25_nets, to_file='model_for_25_nets_average.png',show_shapes = True, show_layer_names = True)
     # plot_model(model_for_25_nets, to_file='model_for_25_nets_average.png')
+
+    # print(output_average_and_pure)
 
     return model_for_25_nets
 
@@ -278,7 +293,17 @@ def train(model_for_25_nets):
 
     model_for_25_nets.compile(optimizer = Adam(lr = 1e-4),
                               loss = 'mean_squared_error',
-                              metrics=['mse'])
+                              metrics=['mse'],
+                              # loss_weights=[1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+                              loss_weights = {
+                                  'average_1':1.0,
+                                  'average_2':1.0,
+                                  'average_3':1.0,
+                                  'recover_model':1.0,
+                                  'backward_model':1.0,
+                                  'forward_model':1.0
+                              }
+                              )
 
     tf_board = TensorBoard(log_dir='./logs',
                            histogram_freq=0,
@@ -300,7 +325,8 @@ def train(model_for_25_nets):
                                        save_weights_only=True)
 
     model_for_25_nets.fit([state_feed,action_feed,next_state_feed],
-                          [state_feed, action_feed, next_state_feed],
+                          [state_feed, action_feed, next_state_feed,
+                           state_feed, action_feed, next_state_feed],
                             batch_size=50,
                             epochs=100,
                             verbose=1,
@@ -353,6 +379,6 @@ def test(model_for_25_nets):
 if __name__ == '__main__':
 
     model_for_25_nets = construct_the_whole_network()
-    # train(model_for_25_nets)
+    train(model_for_25_nets)
     # test(model_for_25_nets)
 
