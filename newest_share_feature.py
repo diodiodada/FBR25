@@ -31,21 +31,25 @@ def action_feature():
 
     return action_feature
 
-
 # =================== define forward model ===================
 # state + action  -> next_state
 def create_forward_model():
+    global STATE_FEATURE
+    global ACTION_FEATURE
 
     f_state = Input(shape=(10,))
     f_action = Input(shape=(3,))
 
-    F_dense_s_1 = Dense(50, activation='relu', name='F_dense_s_1')(f_state)
-    F_dense_s_2 = Dense(50, activation='relu', name='F_dense_s_2')(F_dense_s_1)
-    F_dense_s_3 = Dense(50, activation='relu', name='F_dense_s_3')(F_dense_s_2)
+    # F_dense_s_1 = Dense(50, activation='relu', name='F_dense_s_1')(f_state)
+    # F_dense_s_2 = Dense(50, activation='relu', name='F_dense_s_2')(F_dense_s_1)
+    # F_dense_s_3 = Dense(50, activation='relu', name='F_dense_s_3')(F_dense_s_2)
+    #
+    # F_dense_a_1 = Dense(50, activation='relu', name='F_dense_a_1')(f_action)
+    # F_dense_a_2 = Dense(50, activation='relu', name='F_dense_a_2')(F_dense_a_1)
+    # F_dense_a_3 = Dense(50, activation='relu', name='F_dense_a_3')(F_dense_a_2)
 
-    F_dense_a_1 = Dense(50, activation='relu', name='F_dense_a_1')(f_action)
-    F_dense_a_2 = Dense(50, activation='relu', name='F_dense_a_2')(F_dense_a_1)
-    F_dense_a_3 = Dense(50, activation='relu', name='F_dense_a_3')(F_dense_a_2)
+    F_dense_s_3 = STATE_FEATURE(f_state)
+    F_dense_a_3 = ACTION_FEATURE(f_action)
 
     F_input_1 = Concatenate(axis=-1, name='F_input_1')([F_dense_s_3, F_dense_a_3])
 
@@ -62,26 +66,27 @@ def create_forward_model():
 # =================== define backward model ===================
 # state + next_state -> action
 def create_backward_model():
+    global STATE_FEATURE
 
     b_state = Input(shape=(10,))
     b_next_state = Input(shape=(10,))
 
-    B_dense_s_1 = Dense(50, activation='relu', name='B_dense_s_1')(b_state)
-    B_dense_s_2 = Dense(50, activation='relu', name='B_dense_s_2')(B_dense_s_1)
-    B_dense_s_3 = Dense(50, activation='relu', name='B_dense_s_3')(B_dense_s_2)
+    # B_dense_s_1 = Dense(50, activation='relu', name='B_dense_s_1')(b_state)
+    # B_dense_s_2 = Dense(50, activation='relu', name='B_dense_s_2')(B_dense_s_1)
+    # B_dense_s_3 = Dense(50, activation='relu', name='B_dense_s_3')(B_dense_s_2)
+    #
+    # B_dense_n_1 = Dense(50, activation='relu', name='B_dense_a_1')(b_next_state)
+    # B_dense_n_2 = Dense(50, activation='relu', name='B_dense_a_2')(B_dense_n_1)
+    # B_dense_n_3 = Dense(50, activation='relu', name='B_dense_a_3')(B_dense_n_2)
 
-    B_dense_a_1 = Dense(50, activation='relu', name='B_dense_a_1')(b_next_state)
-    B_dense_a_2 = Dense(50, activation='relu', name='B_dense_a_2')(B_dense_a_1)
-    B_dense_a_3 = Dense(50, activation='relu', name='B_dense_a_3')(B_dense_a_2)
+    B_dense_s_3 = STATE_FEATURE(b_state)
+    B_dense_n_3 = STATE_FEATURE(b_next_state)
 
-    B_input_1 = Concatenate(axis=-1, name='B_input_1')([B_dense_s_3, B_dense_a_3])
+    B_input_1 = Concatenate(axis=-1, name='B_input_1')([B_dense_s_3, B_dense_n_3])
 
     B_input_2 = Dense(50, activation='relu', name='B_input_2')(B_input_1)
     B_input_3 = Dense(30, activation='relu', name='B_input_3')(B_input_2)
     B_input_4 = Dense(20, activation='relu', name='B_input_4')(B_input_3)
-    # B_input_5 = Dense(30, activation='relu', name='B_input_5')(B_input_4)
-    # B_input_6 = Dense(20, activation='relu', name='B_input_6')(B_input_5)
-    # B_input_7 = Dense(10, activation='relu', name='B_input_7')(B_input_6)
     B_action_output = Dense(3, name='B_action_output')(B_input_4)
 
     MODEL_B = Model(inputs=[b_state, b_next_state], outputs=B_action_output, name = 'backward_model')
@@ -91,17 +96,22 @@ def create_backward_model():
 # =================== define recover model ===================
 # action + next_state -> state
 def create_recover_model():
+    global ACTION_FEATURE
+    global STATE_FEATURE
 
     r_action = Input(shape=(3,))
     r_state = Input(shape=(10,))
 
-    R_dense_a_1 = Dense(50, activation='relu', name='R_dense_a_1')(r_action)
-    R_dense_a_2 = Dense(50, activation='relu', name='R_dense_a_2')(R_dense_a_1)
-    R_dense_a_3 = Dense(50, activation='relu', name='R_dense_a_3')(R_dense_a_2)
+    # R_dense_a_1 = Dense(50, activation='relu', name='R_dense_a_1')(r_action)
+    # R_dense_a_2 = Dense(50, activation='relu', name='R_dense_a_2')(R_dense_a_1)
+    # R_dense_a_3 = Dense(50, activation='relu', name='R_dense_a_3')(R_dense_a_2)
+    #
+    # R_dense_s_1 = Dense(50, activation='relu', name='R_dense_s_1')(r_state)
+    # R_dense_s_2 = Dense(50, activation='relu', name='R_dense_s_2')(R_dense_s_1)
+    # R_dense_s_3 = Dense(50, activation='relu', name='R_dense_s_3')(R_dense_s_2)
 
-    R_dense_s_1 = Dense(50, activation='relu', name='R_dense_s_1')(r_state)
-    R_dense_s_2 = Dense(50, activation='relu', name='R_dense_s_2')(R_dense_s_1)
-    R_dense_s_3 = Dense(50, activation='relu', name='R_dense_s_3')(R_dense_s_2)
+    R_dense_a_3 = ACTION_FEATURE(r_action)
+    R_dense_s_3 = STATE_FEATURE(r_state)
 
     R_input_1 = Concatenate(axis=-1, name='R_input_1')([R_dense_s_3, R_dense_a_3])
 
@@ -235,6 +245,9 @@ def add_one_cell(F, B, R, input_for_25_nets):
 pure_output = {}
 not_pure_output = []
 
+
+STATE_FEATURE = state_feature()
+ACTION_FEATURE = action_feature()
 MODEL_F = create_forward_model()
 MODEL_B = create_backward_model()
 MODEL_R = create_recover_model()
@@ -323,9 +336,9 @@ def train(model, complex_or_simple):
     #    17     6          17      1    1
     data = pickle.load(open('FetchReach-v0-sample.p', 'rb'))
 
-    state_feed = data[0:5000, 0:10]
-    action_feed = data[0:5000, 10:13]
-    next_state_feed = data[0:5000, 14:24]
+    state_feed = data[0:10000, 0:10]
+    action_feed = data[0:10000, 10:13]
+    next_state_feed = data[0:10000, 14:24]
 
     if complex_or_simple == 'complex':
         output_feed = [state_feed] * 8 + [action_feed] * 8 + [next_state_feed] * 8
@@ -335,7 +348,7 @@ def train(model, complex_or_simple):
     model.compile(optimizer = Adam(lr = 1e-4),
                   loss = 'mse',
                   # metrics=['mse'],
-                  # loss_weights=[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] * 3,
+                  # loss_weights=[1.0] * 24,
                   )
 
 

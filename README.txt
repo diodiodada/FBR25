@@ -42,3 +42,33 @@
 
 发现 keras 的一个很烦人的特性，就是在多输出模型时，明明输出有3*8=24个（8个网络共享权重，模型名称相同），
 但是训练过程中展示出来的 loss 却只有3个，而不是24个，但是metrics展示出来的的确是24个
+
+
+!!!! 最终章：
+
+实验失败，因为实现发现把25个模型并联的效果不如分别训练 forward net, backward net and recover net。
+其实这也好理解，因为把三个模型串联起来的时候引入了累计误差，也就是说三个模型中的某个的输出会成为其他模型的输入，
+然而这个输入相对于真实值是有误差的，这就相当于人为的在数据中添加了噪声，训练之后在测试集上的效果就当然没有直接在没有噪声的数据上训练的效果好了。
+
+实验方法为：
+运行 newest.py 或者 newest_share_feature.py 代码
+
+实验 1：
+执行 train(model_simple, 'simple') 开始分别训练forward net, backward net and recover net。
+执行 test(model_simple, 'simple') 开始在测试集上测试forward net, backward net and recover net 的表现。
+
+实验 2：
+执行 train(model_complex, 'complex') 开始训练 3-input 24-output with-cell using-set 的模型。
+执行 test(model_simple, 'complex') 开始在测试集上分别测试forward net, backward net and recover net 的表现。
+
+发现一：
+
+    结果为 实验2 的结果永远比 实验1 的结果要差。
+    但是其实实验2中的模型结构是包含实验1的，所以————
+    当在 实验2 中，设置 loss_weights=[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] * 3 时，结果就 实验1 一样了
+
+发现二：
+
+    当使用同样的模型时，运行 newest_share_feature.py 得到的模型要比运行 newest.py 得到的模型结果要好
+    newest_share_feature.py 与 newest.py 代码的唯一区别在于 newest_share_feature.py 使用共享特征层，
+    这说明在共享某一些网络层的权重的时候通过增加辅助网络来联合训练的确是有意义的
