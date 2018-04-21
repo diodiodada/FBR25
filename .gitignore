@@ -1,4 +1,3 @@
 .idea/
 *.hdf5
-*.p
 logs/
